@@ -1,0 +1,66 @@
+name:                smaccm-gcs-gateway
+version:             0.1.0.0
+synopsis:            SMACCMPilot project Ground Control Station (GCS) gateway
+
+license:             BSD3
+license-file:        LICENSE
+author:              Lee Pike & Pat Hickey
+maintainer:          pat@galois.com
+copyright:           Galois, Inc.
+build-type:          Simple
+cabal-version:       >=1.10
+
+library
+  exposed-modules:     SMACCMPilot.GCS.Commsec,
+                       SMACCMPilot.GCS.Commsec.Test,
+                       SMACCMPilot.GCS.Commsec.Opts,
+                       SMACCMPilot.GCS.Gateway.Server,
+                       SMACCMPilot.GCS.Gateway.Opts,
+                       SMACCMPilot.GCS.Gateway.Commsec,
+                       SMACCMPilot.GCS.Gateway.HXFraming,
+                       SMACCMPilot.Mavlink.Parser,
+                       SMACCMPilot.Mavlink.MessageName
+  build-depends:       base,
+                       serialport,
+                       network,
+                       network-simple >= 0.3.0,
+                       bytestring,
+                       unix,
+                       cipher-aes >= 0.2.2,
+                       crypto-cipher-types,
+                       cereal,
+                       hxstream,
+                       smaccm-mavlink,
+                       stm,
+                       monadLib,
+                       async >= 2.0.1,
+                       pipes >= 4.0.0,
+                       pipes-network >= 0.6.0,
+                       pipes-concurrency >= 2.0.1,
+                       smaccm-shared-comm
+  default-language:    Haskell2010
+  ghc-options:         -Wall
+
+executable smaccm-gcs-gateway
+  main-is:             Main.hs
+  build-depends:       base,
+                       serialport,
+                       network,
+                       network-simple >= 0.3.0,
+                       bytestring,
+                       unix,
+                       cipher-aes >= 0.2.2,
+                       crypto-cipher-types,
+                       cereal,
+                       hxstream,
+                       stm,
+                       monadLib,
+                       async >= 2.0.1,
+                       pipes >= 4.0.0,
+                       pipes-network >= 0.6.0,
+                       pipes-concurrency >= 2.0.1,
+                       smaccm-mavlink,
+                       smaccm-shared-comm,
+                       commsec-gcs
+  default-language:    Haskell2010
+  ghc-options:         -Wall -O2 -threaded -rtsopts -with-rtsopts=-N3
