@@ -45,6 +45,6 @@ mavlinkDebugger console = forever $ do
     case messagename (fromIntegral pid) of
       Just m -> m
       Nothing -> "??msgid??"
-  pktname _ = "(short)"
+  pktname _ = "(incomplete)"
 
 
