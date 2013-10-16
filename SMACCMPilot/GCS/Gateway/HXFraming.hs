@@ -11,6 +11,7 @@ module SMACCMPilot.GCS.Gateway.HXFraming
 import           Control.Monad
 import           Data.ByteString               (ByteString)
 import qualified Data.ByteString            as B
+import qualified Data.HXStream              as HX
 import           Data.Word
 import           Pipes
 import           Pipes.Concurrent
@@ -53,17 +54,33 @@ forkEffect :: Effect IO () -> IO ()
 forkEffect e = void $ forkIO $ runEffect e
 
 hxencode :: Console -> Pipe HXFrame ByteString IO ()
-hxencode = undefined
+hxencode _console = forever $ do
+  f <- await
+  yield $ HX.encode (hxframe_tag f) (hxframe_msg f)
+  -- We need to pack the wire with at least trailing FBOs:
+  yield $ B.pack [HX.fbo]
 
 hxdecode :: Console -> Pipe Word8 HXFrame IO ()
-hxdecode = undefined
+hxdecode _console = run HX.emptyStreamState
+  where
+  run state = do
+    b <- await
+    let (mf, state') = HX.decodeByte b state
+    case mf of
+      Just (tag, msg) ->
+        yield $ HXFrame { hxframe_tag = tag, hxframe_msg = msg}
+      Nothing -> return ()
+    run state'
 
-hxframeDebugger :: Console -> String -> Consumer HXFrame IO ()
-hxframeDebugger console title = forever $ do
+hxframeDebugger :: Console -> Pipe HXFrame HXFrame IO ()
+hxframeDebugger console = forever $ do
   f <- await
   lift $ consoleDebug console $ msg f
+  yield f
   where
-  msg f = printf "%s HXFrame %d [%s]" title (hxframe_tag f)
-              (unwords (map hexdig (B.unpack (hxframe_msg f)))) 
+  msg f = printf "HXFrame %d [%s]" (hxframe_tag f) (body f)
+  body f = fixup (unwords (map hexdig (B.unpack (hxframe_msg f))))
   hexdig = printf "0x%0.2x,"
+  -- Drop last char because the above map/unwords is bad hack
+  fixup = reverse . drop 1 . reverse
 

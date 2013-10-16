@@ -5,52 +5,56 @@ module SMACCMPilot.GCS.Gateway.Console
   , consoleError
   , consoleDebug
   , newConsole
+  , annotate
   ) where
 
 import System.IO
 import qualified Control.Concurrent            as C
-import qualified Control.Concurrent.STM.TQueue as T
+import           Control.Concurrent.STM.TQueue
 import           Control.Monad
-import qualified Control.Monad.STM             as T
+import           Control.Monad.STM
 
 import SMACCMPilot.GCS.Gateway.Opts
 
-data ConsoleMsg = ErrorMsg String
-                | LogMsg String
-                | DebugMsg String
-newtype Console = Console { unConsole :: T.TQueue ConsoleMsg }
+data MsgTag = ErrorMsg
+            | LogMsg
+            | DebugMsg
+
+data Console = RealConsole (TQueue (MsgTag, String))
+             | AnnotatedConsole String Console
+
+annotate :: Console -> String -> Console
+annotate c s = AnnotatedConsole (s ++ ": ") c
 
 consoleLog :: Console -> String -> IO ()
-consoleLog console s = writeConsole console (LogMsg s)
+consoleLog console s = writeConsole console LogMsg s
 
 consoleError :: Console -> String -> IO ()
-consoleError console s = writeConsole console (ErrorMsg s)
+consoleError console s = writeConsole console ErrorMsg s
 
 consoleDebug :: Console -> String -> IO ()
-consoleDebug console s = writeConsole console (DebugMsg s)
+consoleDebug console s = writeConsole console DebugMsg s
 
-writeConsole :: Console -> ConsoleMsg -> IO ()
-writeConsole c m =
-  void $ T.atomically $ T.writeTQueue (unConsole c) m
+writeConsole :: Console -> MsgTag -> String -> IO ()
+writeConsole (RealConsole q) t m = void $ atomically $ writeTQueue q (t,m)
+writeConsole (AnnotatedConsole s c) t m = writeConsole c t (s++m)
 
 newConsole :: Options -> Handle -> IO Console
 newConsole opts h = do
-  conQ <- T.newTQueueIO
-  let c = Console conQ
-  _ <- C.forkIO $ printerThread c opts h
-  return c
+  q <- newTQueueIO
+  _ <- C.forkIO $ printerThread q opts h
+  return $ RealConsole q
 
-printerThread :: Console -> Options -> Handle -> IO ()
-printerThread console opts h = forever $ do
-  m <- T.atomically $ T.readTQueue conQ
-  case m of
-    ErrorMsg msg -> when (llevel > 0) $ do
+printerThread :: TQueue (MsgTag, String) -> Options -> Handle -> IO ()
+printerThread q opts h = forever $ do
+  (t, msg) <- atomically $ readTQueue q
+  case t of
+    ErrorMsg -> when (llevel > 0) $ do
       hPutStrLn h ("ERR: " ++ msg)
-    LogMsg msg -> when (llevel > 1) $ do
+    LogMsg -> when (llevel > 1) $ do
       hPutStrLn h ("LOG: " ++ msg)
-    DebugMsg msg -> when (llevel > 2) $ do
+    DebugMsg -> when (llevel > 2) $ do
       hPutStrLn h ("DBG: " ++ msg)
   where
-  conQ = unConsole console
   llevel = logLevel opts
 
