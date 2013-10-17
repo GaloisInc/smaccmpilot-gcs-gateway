@@ -4,12 +4,11 @@ module SMACCMPilot.GCS.Gateway.HXFraming
   , hxframePayloadFromTag
   , createHXFrameWithTag
   , hxframeDebugger
-
   , hxframedSerial
   ) where
 
 import           Control.Monad
-import           Data.ByteString               (ByteString)
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString            as B
 import qualified Data.HXStream              as HX
 import           Data.Word
@@ -20,6 +19,7 @@ import           Text.Printf
 import SMACCMPilot.GCS.Gateway.Serial
 import SMACCMPilot.GCS.Gateway.Console
 import SMACCMPilot.GCS.Gateway.Opts
+import SMACCMPilot.GCS.Gateway.Async
 
 data HXFrame =
   HXFrame
@@ -42,16 +42,14 @@ hxframedSerial opts console hxoutput hxinput = do
   (fromveh_output, fromveh_input) <- spawn Unbounded
   (toveh_output,   toveh_input)   <- spawn Unbounded
   serialServer opts console fromveh_output toveh_input
-  forkEffect $ fromInput hxinput
-           >-> hxencode console
-           >-> toOutput toveh_output
-  forkEffect $ fromInput fromveh_input
-           >-> hxdecode console
-           >-> toOutput hxoutput
-
-
-forkEffect :: Effect IO () -> IO ()
-forkEffect e = void $ forkIO $ runEffect e
+  void $ asyncEffect "hxstream encode"
+      $ fromInput hxinput
+    >-> hxencode console
+    >-> toOutput toveh_output
+  void $ asyncEffect "hxstream decode"
+      $ fromInput fromveh_input
+    >-> hxdecode console
+    >-> toOutput hxoutput
 
 hxencode :: Console -> Pipe HXFrame ByteString IO ()
 hxencode _console = forever $ do

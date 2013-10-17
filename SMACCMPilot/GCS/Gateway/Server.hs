@@ -4,7 +4,7 @@ module SMACCMPilot.GCS.Gateway.Server
   ( gatewayServer
   ) where
 
-import           Control.Monad
+import qualified Control.Concurrent.Async        as A
 import           Data.Monoid
 import           System.IO
 
@@ -23,6 +23,7 @@ import           SMACCMPilot.GCS.Gateway.HXFraming
 import           SMACCMPilot.GCS.Gateway.Mavlink
 import           SMACCMPilot.GCS.Gateway.ByteString
 import           SMACCMPilot.GCS.Gateway.Link
+import           SMACCMPilot.GCS.Gateway.Async
 
 gatewayServer :: CS.Options -> App.Options -> IO ()
 gatewayServer csopts appopts = do
@@ -48,27 +49,27 @@ gatewayServer csopts appopts = do
 
   N.serve (N.Host "127.0.0.1") (show (App.srvPort appopts)) $ \(s,_) -> do
     consoleLog console "Connected to TCP client"
-    forkEffect $  fromInput fromradio_input'
---                 >-> hxframeDebugger (annotate console "fromveh raw")
-                 >-> hxframePayloadFromTag 0
---                 >-> bytestringDebugger (annotate console "fromveh tagged")
-                 >-> decrypt commsecCtx
---                 >-> bytestringDebugger (annotate console "fromveh decrypted")
-                 >-> mavlinkPacketSlice (annotate console "fromveh mavlinkslice")
---                 >-> mavlinkDebugger (annotate console "fromveh")
-                 >-> toSocket s
+    a1 <- asyncEffect "radio to socket"
+        $ fromInput fromradio_input'
+--      >-> hxframeDebugger (annotate console "fromveh raw")
+      >-> hxframePayloadFromTag 0
+--      >-> bytestringDebugger (annotate console "fromveh tagged")
+      >-> decrypt commsecCtx
+--      >-> bytestringDebugger (annotate console "fromveh decrypted")
+      >-> mavlinkPacketSlice (annotate console "fromveh mavlinkslice")
+--      >-> mavlinkDebugger (annotate console "fromveh")
+      >-> toSocket s
 
-    runEffect $ fromSocket s 64
---          >-> bytestringDebugger (annotate console "toveh raw")
-          >-> mavlinkPacketSlice (annotate console "toveh mavlinkslice")
-          >-> mavlinkDebugger (annotate console "toveh")
-          >-> bytestringPad Comm.mavlinkSize
---          >-> bytestringDebugger (annotate console "toveh plaintext")
-          >-> encrypt commsecCtx
---          >-> bytestringDebugger (annotate console "toveh ct")
-          >-> createHXFrameWithTag 0
-          >-> toOutput toradio_output
-
-forkEffect :: Effect IO () -> IO ()
-forkEffect e = void $ forkIO $ runEffect e
+    a2 <- asyncEffect "socket to radio"
+        $ fromSocket s 64
+--      >-> bytestringDebugger (annotate console "toveh raw")
+      >-> mavlinkPacketSlice (annotate console "toveh mavlinkslice")
+      >-> mavlinkDebugger (annotate console "toveh")
+      >-> bytestringPad Comm.mavlinkSize
+--      >-> bytestringDebugger (annotate console "toveh plaintext")
+      >-> encrypt commsecCtx
+--      >-> bytestringDebugger (annotate console "toveh ct")
+      >-> createHXFrameWithTag 0
+      >-> toOutput toradio_output
+    mapM_ A.wait [a1, a2]
 
