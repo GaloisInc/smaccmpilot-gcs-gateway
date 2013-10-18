@@ -1,40 +1,25 @@
 
-
 module SMACCMPilot.GCS.Gateway.ByteString where
 
-import           Control.Monad
 import           Data.ByteString               (ByteString)
 import qualified Data.ByteString            as B
-import           Pipes
 import           Text.Printf
 
-import SMACCMPilot.GCS.Gateway.Serial
-import SMACCMPilot.GCS.Gateway.Serial
-import SMACCMPilot.GCS.Gateway.Console
-import SMACCMPilot.GCS.Gateway.Console
+import SMACCMPilot.GCS.Gateway.Monad
 
--- Pad out Mavlink packets.
--- paddedPacket :: B.ByteString -> B.ByteString
--- paddedPacket bs =
---   bs `B.append` (B.pack $ replicate (fromInteger C.mavlinkSize - B.length bs) 0)
---
-
-bytestringPad :: Integer -> Pipe ByteString ByteString IO ()
-bytestringPad lint = forever $ do
-  bs <- await
-  when (B.length bs <= len) $
-    yield $ bs `B.append` (B.pack $ replicate (len - B.length bs) 0)
+bytestringPad :: Integer -> ByteString -> GW ByteString
+bytestringPad lint bs = 
+  if (B.length bs <= len)
+    then return $ bs `B.append` (B.pack $ replicate (len - B.length bs) 0)
+    else writeErr "bytestringPad got oversized bytestring" >> return bs
   where
   len = fromInteger lint
 
-bytestringDebugger :: Console -> Pipe ByteString ByteString IO ()
-bytestringDebugger console = forever $ do
-  f <- await
-  lift $ consoleDebug console $ msg f
-  yield f
+bytestringDebugger :: String -> ByteString -> GW ByteString
+bytestringDebugger tag bs = writeDbg msg >> return bs
   where
-  msg f = printf "ByteString %d [%s]" (B.length f) (body f)
-  body f = fixup (unwords (map hexdig (B.unpack f)))
+  msg = printf "%s ByteString %d [%s]" tag (B.length bs) body
+  body = fixup (unwords (map hexdig (B.unpack bs)))
   hexdig = printf "0x%0.2x,"
   -- Drop last char because the above map/unwords is bad hack
   fixup = reverse . drop 1 . reverse

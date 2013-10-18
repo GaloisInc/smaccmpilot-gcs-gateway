@@ -3,18 +3,19 @@ module SMACCMPilot.GCS.Gateway.Async where
 
 import           Control.Exception
 import qualified Control.Concurrent.Async        as A
-import           Pipes
-import           Pipes.Concurrent
 import           System.IO
 
-asyncEffect :: String -> Effect IO () -> IO (A.Async ())
-asyncEffect name e = A.async $ catch run c
+import SMACCMPilot.GCS.Gateway.Console
+import SMACCMPilot.GCS.Gateway.Monad
+
+asyncRun :: String -> IO () -> IO (A.Async ())
+asyncRun name act = A.async $ catch run c
   where
-  run = do
-    runEffect e
-    performGC
-    exit "effect complete"
-  exit msg = hPutStrLn stderr $ "asyncEffect " ++ name ++ " exiting: " ++ msg
+  run = act >> exit "run complete"
+  exit msg = hPutStrLn stderr $ "asyncRun " ++ name ++ " exiting: " ++ msg
   c :: SomeException -> IO ()
   c x = exit ("exception: " ++ show x)
+
+asyncRunGW :: Console -> String -> GW () -> IO (A.Async ())
+asyncRunGW console name act = asyncRun name $ runGW (annotate console name) act
 

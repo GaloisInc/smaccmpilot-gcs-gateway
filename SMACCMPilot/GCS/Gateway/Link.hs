@@ -12,9 +12,9 @@ import           Data.ByteString (ByteString)
 import           Data.Char (ord)
 import           Data.Word
 
-import           Pipes
-import           Pipes.Concurrent
-
+import           SMACCMPilot.GCS.Gateway.Monad
+import           SMACCMPilot.GCS.Gateway.Async
+import           SMACCMPilot.GCS.Gateway.Queue
 import           SMACCMPilot.GCS.Gateway.Console
 import           SMACCMPilot.GCS.Gateway.HXFraming
 import           SMACCMPilot.GCS.Gateway.ByteString
@@ -61,42 +61,24 @@ parseRadioStat bs =
     , ecc_pkts  = v16 19 20
     }
 
-filterRadioStat :: Pipe ByteString RadioStat IO ()
-filterRadioStat = forever $ do
-  bs <- await
-  case parseRadioStat bs of
-    Just rs -> yield rs
-    Nothing -> return ()
+filterRadioStat :: ByteString -> GW (Maybe RadioStat)
+filterRadioStat bs = return $ parseRadioStat bs
 
-debugRadioStat :: Console -> Pipe RadioStat RadioStat IO ()
-debugRadioStat console = forever $ do
-  rs <- await
-  dbg (show rs)
-  yield rs
-  where
-  dbg = lift . (consoleDebug console)
+debugRadioStat :: RadioStat -> GW ()
+debugRadioStat rs = writeDbg (show rs)
 
-linkManagment :: Console -> Output HXFrame -> Input HXFrame -> IO ()
+linkManagment :: Console -> QueueOutput HXFrame -> QueueInput HXFrame -> IO ()
 linkManagment console link_output link_input = do
-  forkEffect $ producePeriodically 1000000 (B.pack [0x42, 0x0d])
-           >-> bytestringDebugger (annotate console "toradio")
-           >-> createHXFrameWithTag 1
-           >-> toOutput link_output
-
-  forkEffect $ fromInput link_input
-           >-> hxframePayloadFromTag 1
-           >-> bytestringDebugger (annotate console "fromradio")
-           >-> filterRadioStat
-           >-> debugRadioStat (annotate console "fromradio")
-           >-> consumeAll
+  void $ asyncRunGW console "link process" $ forever $ do
+    let pipe1 = bytestringDebugger "fromradio"
+            >=> filterRadioStat
+        pipe2 = debugRadioStat
+    queuePopGW link_input >>= (hxframePayloadFromTag 1 >~> (pipe1 >~> pipe2))
+  void $ asyncRunGW console "link request" $ forever $ do
+    lift $ C.threadDelay 1000000
+    createHXFrameWithTag 1 reqFrame >>= queuePushGW link_output
   where
-  producePeriodically per val = forever $
-    (lift (C.threadDelay per)) >> yield val
-  consumeAll = forever (await >>= const (return ()))
-
-  forkEffect :: Effect IO () -> IO ()
-  forkEffect e = void $ forkIO $ runEffect e
-
+  reqFrame = B.pack [0x42, 0x0d]
 
 
 

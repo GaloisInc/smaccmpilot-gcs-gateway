@@ -5,12 +5,9 @@ module SMACCMPilot.GCS.Gateway.Server
   ) where
 
 import qualified Control.Concurrent.Async        as A
-import           Data.Monoid
+import           Control.Monad
 import           System.IO
 
-import           Pipes
-import           Pipes.Concurrent
-import           Pipes.Network.TCP
 import qualified Network.Simple.TCP              as N
 
 import qualified SMACCMPilot.Communications      as Comm
@@ -24,6 +21,8 @@ import           SMACCMPilot.GCS.Gateway.Mavlink
 import           SMACCMPilot.GCS.Gateway.ByteString
 import           SMACCMPilot.GCS.Gateway.Link
 import           SMACCMPilot.GCS.Gateway.Async
+import           SMACCMPilot.GCS.Gateway.Queue
+import           SMACCMPilot.GCS.Gateway.Monad
 
 gatewayServer :: CS.Options -> App.Options -> IO ()
 gatewayServer csopts appopts = do
@@ -33,43 +32,51 @@ gatewayServer csopts appopts = do
   -- We want to broadcast messages from the radio onto two
   -- different channels, one to the link managment, one to the
   -- commsec server:
-  (fromradio_output,  fromradio_input)  <- spawn Unbounded
-  (fromradio_output', fromradio_input') <- spawn Unbounded
+  (fromradio_output,  fromradio_input)  <- newQueue
+  (fromradio_output', fromradio_input') <- newQueue
   -- Both the link managment and commsec server will write to
   -- this channel:
-  (toradio_output,    toradio_input)    <- spawn Unbounded
+  (toradio_output,    toradio_input)    <- newQueue
 
   hxframedSerial appopts (annotate console "hxserial")
-                (fromradio_output <> fromradio_output')
+                [fromradio_output, fromradio_output']
                 toradio_input
 
-  linkManagment (annotate console "link") toradio_output fromradio_input
+  linkManagment console toradio_output fromradio_input
 
-  commsecCtx <- mkCommsec csopts (annotate console "commsec")
+  commsecCtx <- mkCommsec csopts
 
   N.serve (N.Host "127.0.0.1") (show (App.srvPort appopts)) $ \(s,_) -> do
     consoleLog console "Connected to TCP client"
-    a1 <- asyncEffect "radio to socket"
-        $ fromInput fromradio_input'
---      >-> hxframeDebugger (annotate console "fromveh raw")
-      >-> hxframePayloadFromTag 0
---      >-> bytestringDebugger (annotate console "fromveh tagged")
-      >-> decrypt commsecCtx
---      >-> bytestringDebugger (annotate console "fromveh decrypted")
-      >-> mavlinkPacketSlice (annotate console "fromveh mavlinkslice")
---      >-> mavlinkDebugger (annotate console "fromveh")
-      >-> toSocket s
+    pktslicer1 <- mkMavlinkPacketSlice
+    pktslicer2 <- mkMavlinkPacketSlice
+    a1 <- asyncRunGW console "radio to socket" $ forever $
+            queuePopGW fromradio_input' >>=
+              tosock s pktslicer1 commsecCtx
+    a2 <- asyncRunGW console "socket to radio" $ forever $
+            lift (N.recv s 64) >>~
+              fromsock toradio_output pktslicer2 commsecCtx
 
-    a2 <- asyncEffect "socket to radio"
-        $ fromSocket s 64
---      >-> bytestringDebugger (annotate console "toveh raw")
-      >-> mavlinkPacketSlice (annotate console "toveh mavlinkslice")
-      >-> mavlinkDebugger (annotate console "toveh")
-      >-> bytestringPad Comm.mavlinkSize
---      >-> bytestringDebugger (annotate console "toveh plaintext")
-      >-> encrypt commsecCtx
---      >-> bytestringDebugger (annotate console "toveh ct")
-      >-> createHXFrameWithTag 0
-      >-> toOutput toradio_output
     mapM_ A.wait [a1, a2]
+    where
+    tosock s mavlinkPacketSlice commsecCtx =
+      hxframeDebugger "fromveh raw"           >=>
+      hxframePayloadFromTag 0                 >~>
+      bytestringDebugger "fromveh tagged"     >=>
+      decrypt commsecCtx                      >~>
+      bytestringDebugger "fromveh decrypted"  >=>
+      mavlinkPacketSlice                      >~>
+      mavlinkDebugger "fromveh"               >=>
+      lift . (N.send s)
+
+    fromsock q mavlinkPacketSlice commsecCtx =
+      bytestringDebugger "toveh raw"       >=>
+      mavlinkPacketSlice                   >~>
+      mavlinkDebugger "toveh"              >=>
+      bytestringPad Comm.mavlinkSize       >=>
+      bytestringDebugger "toveh plaintext" >=>
+      encrypt commsecCtx                   >~>
+      bytestringDebugger "toveh ct"        >=>
+      createHXFrameWithTag 0               >=>
+      queuePushGW q
 
