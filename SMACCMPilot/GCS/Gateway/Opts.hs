@@ -13,6 +13,7 @@ data Options = Options
   , serPort    :: FilePath -- Serial Port Filename
   , serBaud    :: SP.CommSpeed -- Serial Baud Rate
   , srvPort    :: Integer  -- Server TCP Port
+  , testMode   :: Maybe String
   } deriving (Show)
 
 defaultOpts :: Options
@@ -22,6 +23,7 @@ defaultOpts = Options
   -- If you change default serBaud, also change integer num in options msg
   , serBaud  = SP.CS57600
   , srvPort  = 6000
+  , testMode = Nothing
   }
 
 options :: [OptDescr (Options -> Options)]
@@ -44,6 +46,9 @@ options =
   , Option [] ["port"]
       (ReqArg (\arg opts -> opts { srvPort = mkSrvPort arg }) "portnumber")
       ("Server TCP port (default:" ++ (show (srvPort defaultOpts)) ++ ")")
+  , Option [] ["test"]
+      (ReqArg (\arg opts -> opts { testMode = Just arg }) "testname")
+      ("test modes (for development only)")
   ]
 
 mkSrvPort :: String -> Integer

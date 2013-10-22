@@ -4,6 +4,8 @@ module SMACCMPilot.GCS.Gateway.Server
   ( gatewayServer
   ) where
 
+import qualified Data.ByteString                 as B
+import qualified Control.Concurrent              as C
 import qualified Control.Concurrent.Async        as A
 import           Control.Monad
 import           System.IO
@@ -46,6 +48,16 @@ gatewayServer csopts appopts = do
 
   commsecCtx <- mkCommsec csopts
 
+  case App.testMode appopts of
+    Nothing -> return ()
+    Just n -> do
+        let rate = read n :: Int
+        putStrLn ("Test mode running at " ++ (show rate) ++ "hz")
+        runGW console $ forever $
+          lift (C.threadDelay (1000000 `div` rate)) >>
+          bytestringPad Comm.mavlinkSize  (B.pack [2,3,4,5]) >>=
+            (createHXFrameWithTag 0 >=> queuePushGW toradio_output)
+
   N.serve (N.Host "127.0.0.1") (show (App.srvPort appopts)) $ \(s,_) -> do
     consoleLog console "Connected to TCP client"
     pktslicer1 <- mkMavlinkPacketSlice
@@ -62,21 +74,24 @@ gatewayServer csopts appopts = do
     tosock s mavlinkPacketSlice commsecCtx =
       hxframeDebugger "fromveh raw"           >=>
       hxframePayloadFromTag 0                 >~>
-      bytestringDebugger "fromveh tagged"     >=>
+--      bytestringDebugger "fromveh tagged"     >=>
       decrypt commsecCtx                      >~>
-      bytestringDebugger "fromveh decrypted"  >=>
+--      bytestringDebugger "fromveh decrypted"  >=>
       mavlinkPacketSlice                      >~>
       mavlinkDebugger "fromveh"               >=>
       lift . (N.send s)
 
     fromsock q mavlinkPacketSlice commsecCtx =
-      bytestringDebugger "toveh raw"       >=>
+--      bytestringDebugger "toveh raw"       >=>
       mavlinkPacketSlice                   >~>
       mavlinkDebugger "toveh"              >=>
       bytestringPad Comm.mavlinkSize       >=>
-      bytestringDebugger "toveh plaintext" >=>
+--      bytestringDebugger "toveh plaintext" >=>
       encrypt commsecCtx                   >~>
-      bytestringDebugger "toveh ct"        >=>
+--      bytestringDebugger "toveh ct"        >=>
       createHXFrameWithTag 0               >=>
       queuePushGW q
+
+
+
 
