@@ -25,3 +25,14 @@ bytestringDebugger tag bs = writeDbg msg >> return bs
   fixup = reverse . drop 1 . reverse
 
 
+bytestringDebugWhen :: (ByteString -> Bool) -> String -> ByteString -> GW ByteString
+bytestringDebugWhen p tag bs = case p bs of
+    True -> writeDbg msg >> return bs
+    False -> return bs
+  where
+  msg = printf "%s ByteString %d [%s]" tag (B.length bs) body
+  body = fixup (unwords (map hexdig (B.unpack bs)))
+  hexdig = printf "0x%0.2x,"
+  -- Drop last char because the above map/unwords is bad hack
+  fixup = reverse . drop 1 . reverse
+

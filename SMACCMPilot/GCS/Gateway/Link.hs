@@ -36,7 +36,7 @@ data RadioStat =
     , rx_ok     :: Word16 -- Stored Uint16
     , ecc_errs  :: Word16 -- Stored Uint16
     , ecc_pkts  :: Word16 -- Stored Uint16
-    , unlock_ct :: Word8  -- Stored Uint16
+    , max_xmit  :: Word8  -- Stored Uint16
     } deriving (Show)
 
 parseRadioStat :: ByteString -> Maybe RadioStat
@@ -64,7 +64,7 @@ parseRadioStat bs =
     , ecc_pkts  = v16 19 20
     , tx_ok     = v16 21 22
     , rx_ok     = v16 23 24
-    , unlock_ct = v8 25
+    , max_xmit  = v8 25
     }
 
 filterRadioStat :: ByteString -> GW (Maybe RadioStat)
@@ -77,10 +77,11 @@ linkManagment :: Console -> QueueOutput HXFrame -> QueueInput HXFrame -> IO ()
 linkManagment console link_output link_input = do
   void $ asyncRunGW console "link process" $ forever $ do
     let pipe1 =
---          bytestringDebugger "fromradio" >=>
+          bytestringDebugWhen (\b -> (head (B.unpack b)) /= 0x42) "fromradio!!!!!" >=>
           filterRadioStat
         pipe2 = debugRadioStat
-    queuePopGW link_input >>= (hxframeDebugger "rawlink" >=> (hxframePayloadFromTag 1 >~> (pipe1 >~> pipe2)))
+    queuePopGW link_input >>= ( -- hxframeDebugger "rawlink" >=>
+                                (hxframePayloadFromTag 1 >~> (pipe1 >~> pipe2)))
   void $ asyncRunGW console "link request" $ forever $ do
     lift $ C.threadDelay 1000000
     createHXFrameWithTag 1 reqFrame >>= queuePushGW link_output
