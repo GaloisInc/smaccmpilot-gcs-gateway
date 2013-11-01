@@ -36,12 +36,16 @@ data RadioStat =
     , rx_ok     :: Word16 -- Stored Uint16
     , ecc_errs  :: Word16 -- Stored Uint16
     , ecc_pkts  :: Word16 -- Stored Uint16
-    , max_xmit  :: Word8  -- Stored Uint16
+    , max_xmit  :: Word8  -- Stored Uint8
+    , tx_insert :: Word8  -- Stored Uint8
+    , tx_remove :: Word8  -- Stored Uint8
+    , rx_insert :: Word8  -- Stored Uint8
+    , rx_remove :: Word8  -- Stored Uint8
     } deriving (Show)
 
 parseRadioStat :: ByteString -> Maybe RadioStat
 parseRadioStat bs =
-  if B.length bs /= 26 then Nothing
+  if B.length bs /= 30 then Nothing
   else if fromIntegral (head bss) /= (ord 'B') then Nothing
   else Just unpacked
   where
@@ -65,6 +69,10 @@ parseRadioStat bs =
     , tx_ok     = v16 21 22
     , rx_ok     = v16 23 24
     , max_xmit  = v8 25
+    , tx_insert = v8 26
+    , tx_remove = v8 27
+    , rx_insert = v8 28
+    , rx_remove = v8 29
     }
 
 filterRadioStat :: ByteString -> GW (Maybe RadioStat)
