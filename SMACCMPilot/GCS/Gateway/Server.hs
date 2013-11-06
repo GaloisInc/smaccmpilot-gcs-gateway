@@ -52,10 +52,10 @@ gatewayServer csopts appopts = do
     Nothing -> return ()
     Just n -> do
         let rate = read n :: Int
-        putStrLn ("Test mode running at " ++ (show rate) ++ "hz")
+        putStrLn ("Test mode running at " ++ show rate ++ "hz")
         runGW console $ forever $
           lift (C.threadDelay (1000000 `div` rate)) >>
-          bytestringPad Comm.mavlinkSize  (B.pack [2,3,4,5]) >>=
+          bytestringPad (B.pack [2,3,4,5])          >>=
             (createHXFrameWithTag 0 >=> queuePushGW toradio_output)
 
   N.serve (N.Host "127.0.0.1") (show (App.srvPort appopts)) $ \(s,_) -> do
@@ -85,13 +85,12 @@ gatewayServer csopts appopts = do
 --      bytestringDebugger "toveh raw"       >=>
       mavlinkPacketSlice                   >~>
       mavlinkDebugger "toveh"              >=>
-      bytestringPad Comm.mavlinkSize       >=>
+      bytestringPad                        >=>
 --      bytestringDebugger "toveh plaintext" >=>
       encrypt commsecCtx                   >~>
 --      bytestringDebugger "toveh ct"        >=>
       createHXFrameWithTag 0               >=>
       queuePushGW q
-
 
 
 

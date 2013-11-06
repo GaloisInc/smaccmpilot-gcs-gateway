@@ -45,8 +45,9 @@ type ProcessSt = ([Error], Packets, ParseSt)
 --------------------------------------------------------------------------------
 
 -- Parse a bytestream for Mavlink packets.
-parseStream :: Word8 -- ^ Maximum number of bytes we'll parse before failing.
-            -> ParseSt -- ^ Parser state.
+parseStream :: Word8        -- ^ Maximum number of bytes we'll parse before
+                            -- failing.
+            -> ParseSt      -- ^ Parser state.
             -> B.ByteString -- ^ Input.
             -> ProcessSt
 parseStream maxBytes s = parseStream' ([], [], s)

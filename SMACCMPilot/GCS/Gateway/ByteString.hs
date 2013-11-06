@@ -1,19 +1,19 @@
-
 module SMACCMPilot.GCS.Gateway.ByteString where
 
 import           Data.ByteString               (ByteString)
 import qualified Data.ByteString            as B
 import           Text.Printf
 
-import SMACCMPilot.GCS.Gateway.Monad
+import qualified SMACCMPilot.Communications as Comm
+import           SMACCMPilot.GCS.Gateway.Monad
 
-bytestringPad :: Integer -> ByteString -> GW ByteString
-bytestringPad lint bs = 
-  if (B.length bs <= len)
+bytestringPad :: ByteString -> GW ByteString
+bytestringPad bs =
+  if B.length bs <= len
     then return $ bs `B.append` (B.pack $ replicate (len - B.length bs) 0)
     else writeErr "bytestringPad got oversized bytestring" >> return bs
   where
-  len = fromInteger lint
+  len = fromInteger Comm.mavlinkSize
 
 bytestringDebugger :: String -> ByteString -> GW ByteString
 bytestringDebugger tag bs = writeDbg msg >> return bs
@@ -24,8 +24,8 @@ bytestringDebugger tag bs = writeDbg msg >> return bs
   -- Drop last char because the above map/unwords is bad hack
   fixup = reverse . drop 1 . reverse
 
-
-bytestringDebugWhen :: (ByteString -> Bool) -> String -> ByteString -> GW ByteString
+bytestringDebugWhen ::
+  (ByteString -> Bool) -> String -> ByteString -> GW ByteString
 bytestringDebugWhen p tag bs = case p bs of
     True -> writeDbg msg >> return bs
     False -> return bs

@@ -49,11 +49,11 @@ printerThread :: TQueue (MsgTag, String) -> Options -> Handle -> IO ()
 printerThread q opts h = forever $ do
   (t, msg) <- atomically $ readTQueue q
   case t of
-    ErrorMsg -> when (llevel > 0) $ do
+    ErrorMsg -> when (llevel > 0) $
       hPutStrLn h ("ERR: " ++ msg)
-    LogMsg -> when (llevel > 1) $ do
+    LogMsg -> when (llevel > 1)   $
       hPutStrLn h ("LOG: " ++ msg)
-    DebugMsg -> when (llevel > 2) $ do
+    DebugMsg -> when (llevel > 2) $
       hPutStrLn h ("DBG: " ++ msg)
   where
   llevel = logLevel opts

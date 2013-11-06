@@ -1,5 +1,3 @@
-
-
 module SMACCMPilot.GCS.Gateway.Queue
   ( QueueInput
   , QueueOutput
