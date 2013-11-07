@@ -12,7 +12,6 @@ import           System.IO
 
 import qualified Network.Simple.TCP              as N
 
-import qualified SMACCMPilot.Communications      as Comm
 import qualified SMACCMPilot.GCS.Commsec.Opts    as CS
 import qualified SMACCMPilot.GCS.Gateway.Opts    as App
 
@@ -77,14 +76,12 @@ gatewayServer csopts appopts = do
 --      bytestringDebugger "fromveh tagged"     >=>
       decrypt commsecCtx                      >~>
 --      bytestringDebugger "fromveh decrypted"  >=>
-      mavlinkPacketSlice                      >~>
-      mavlinkDebugger "fromveh"               >=>
+      mavlinkPacketSlice "fromveh"            >~>
       lift . (N.send s)
 
     fromsock q mavlinkPacketSlice commsecCtx =
 --      bytestringDebugger "toveh raw"       >=>
-      mavlinkPacketSlice                   >~>
-      mavlinkDebugger "toveh"              >=>
+      mavlinkPacketSlice "toveh"           >~>
       bytestringPad                        >=>
 --      bytestringDebugger "toveh plaintext" >=>
       encrypt commsecCtx                   >~>

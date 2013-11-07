@@ -5,6 +5,7 @@ module SMACCMPilot.Mavlink.Parser
   , emptyParseSt
   , parseStream
   , ProcessSt
+  , magicNum
   ) where
 
 import qualified Data.ByteString as B
@@ -116,11 +117,14 @@ parseByte s b
                  crc_hi ss    = snd (crc_lo_hi (crc ss))
   | otherwise =
       case b of
-        254 -> ok $ addByte b $ s { gotMagic = True
-                                  , crc = 0xFFFF
-                                  , packetOffs = 1
-                                  }
-        _   -> ok s -- Don't add byte here---not parsing a packet.
+        magicNum -> ok $ addByte b $ s { gotMagic = True
+                                       , crc = 0xFFFF
+                                       , packetOffs = 1
+                                       }
+        _        -> ok s -- Don't add byte here---not parsing a packet.
+
+magicNum :: Word8
+magicNum = 254
 
 ok :: ParseSt -> Result
 ok = Right

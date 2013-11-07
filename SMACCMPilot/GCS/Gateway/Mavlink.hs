@@ -1,6 +1,5 @@
 module SMACCMPilot.GCS.Gateway.Mavlink
   ( mkMavlinkPacketSlice
-  , mavlinkDebugger
   ) where
 
 import Data.IORef
@@ -39,30 +38,30 @@ takeWhileLen bss
 
 -- This is one of the functions that really benefits from pipes/iteratees
 -- Instead I'll just mutate some state in the IO monad
--- XXX
--- This could just live in the GW monad in a state component.
-mkMavlinkPacketSlice :: IO (ByteString -> GW (Maybe ByteString))
+-- XXX This could just live in the GW monad in a state component.
+mkMavlinkPacketSlice :: IO (String -> ByteString -> GW (Maybe ByteString))
 mkMavlinkPacketSlice = do
   stateRef   <- newIORef emptyParseSt  :: IO (IORef ParseSt)
   pendingRef <- newIORef []            :: IO (IORef [ByteString])
-  return $ \bs -> do
+  return $ \tag bs -> do
     state <- lift $ readIORef stateRef :: GW ParseSt
     (packets, state') <- run state bs
     lift $ writeIORef stateRef state'
     -- Return the first-queued fully-parsed packet.
-    returnNext pendingRef packets
+    returnNext tag pendingRef packets
   where
   run state bs = do
     let (errs, packets, state') = parseStream maxsize state bs
     mapM_ writeErr errs
     return (packets, state')
   maxsize = fromIntegral mavlinkSize
-  returnNext pref newpkts = do
+  returnNext tag pref newpkts = do
     pending <- lift $ readIORef pref
     case pending ++ newpkts of
       []   -> do lift (writeIORef pref [])
                  return Nothing
       pend -> do
+        mapM_ (mavlinkDebugger tag) pend
         let (snd, pend') = takeWhileLen pend
         lift (writeIORef pref pend')
         -- I don't think we'll ever get a bunch of packets backed up in here
@@ -73,13 +72,13 @@ mkMavlinkPacketSlice = do
   warnQueue len = writeLog ("warning: mavlink packet slicer backlog is "
                            ++ (show len) ++ " long")
 
-mavlinkDebugger :: String -> ByteString -> GW ByteString
-mavlinkDebugger tag bs = writeDbg msg >> return bs
+mavlinkDebugger :: String -> ByteString -> GW ()
+mavlinkDebugger tag bs = writeDbg msg
   where
-  p = B.unpack bs
-  msg = printf "%s MAVLink %s [%s]" tag (pktname p) (display p)
+  p       = B.unpack bs
+  msg     = printf "%s MAVLink %s [%s]" tag (pktname p) (display p)
   display = fixup . unwords . map (printf "0x%0.2x,")
-  fixup = reverse . drop 1 . reverse
+  fixup   = reverse . drop 1 . reverse
 
   pktname :: [Word8] -> String
   pktname (_:_:_:_:_:pid:_) =
