@@ -1,25 +1,24 @@
 module SMACCMPilot.GCS.Commsec.Test (main) where
 
-import Data.Maybe
 import Data.Word
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
 import Data.ByteString (ByteString)
 
-import Crypto.Cipher.AES                -- Vincent's GCM routine
-import Crypto.Cipher.Types
-import Data.IORef
-import Data.Serialize
+--import Crypto.Cipher.AES                -- Vincent's GCM routine
+--import Crypto.Cipher.Types
+--import Data.IORef
+--import Data.Serialize
 import SMACCMPilot.GCS.Commsec
 
 maxMsgLen :: Int
 maxMsgLen = 84
 
-uavID, base0ID, base1ID :: BaseId
+uavID, base0ID  :: BaseId
 uavID   = 0
 base0ID = 0
-base1ID = 1
+-- base1ID = 1
 
 b2uSalt, u2bSalt :: Word32
 b2uSalt = 9219834
@@ -41,7 +40,7 @@ main :: IO ()
 main = do
   uavCtx   <- secPkgInit_HS uavID   b2uSalt baseToUavKey u2bSalt uavToBaseKey
   base0Ctx <- secPkgInit_HS base0ID u2bSalt uavToBaseKey b2uSalt baseToUavKey
-  base1Ctx <- secPkgInit_HS base1ID u2bSalt uavToBaseKey b2uSalt baseToUavKey
+  -- base1Ctx <- secPkgInit_HS base1ID u2bSalt uavToBaseKey b2uSalt baseToUavKey
 
   Just uavPkg <- secPkgEncInPlace_HS uavCtx (BC.pack $ mkMsg "uav!")
 
@@ -54,6 +53,5 @@ main = do
   report (Left err) = putStrLn ("failure: " ++ (show err))
   report (Right res) = BC.putStrLn res
 
+simpleHex :: a -> String
 simpleHex = const "" -- XXX where did lee get this function from (module Hexdump)?
-
-
