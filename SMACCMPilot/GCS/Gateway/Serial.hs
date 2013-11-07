@@ -9,10 +9,8 @@ import           Data.ByteString (ByteString)
 
 import           Control.Concurrent
 import           Control.Concurrent.Async
-import           Control.Exception
 import           Control.Monad
 
-import           System.IO
 import qualified System.Hardware.Serialport as SP
 
 import SMACCMPilot.GCS.Gateway.Opts
@@ -31,13 +29,16 @@ serialServer opts console toser fromser =
   where
   settings = SP.defaultSerialSettings { SP.commSpeed = serBaud opts }
   port = serPort opts
-  server console outp inp serialport = do
-    consoleLog console "Connected to serial client"
-    a1 <- asyncRunGW console "serial input" $ forever $ do
-      bs <- lift $ SP.recv serialport 16
+  server consle outp inp serialport = do
+    consoleLog consle "Connected to serial client"
+
+    SP.flush serialport
+
+    a1 <- asyncRunGW consle "serial input" $ forever $ do
+      bs <- lift $ SP.recv serialport 2048
       mapM_ (queuePushGW outp) (B.unpack bs)
-    a2 <- asyncRunGW console "serial output" $ forever $
+    a2 <- asyncRunGW consle "serial output" $ forever $
             queuePopGW inp >>= lift . (SP.send serialport)
     mapM_ wait [a1, a2]
-    consoleLog console "Disconnecting from serial client"
+    consoleLog consle "Disconnecting from serial client"
 

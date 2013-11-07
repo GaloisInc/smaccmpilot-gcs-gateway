@@ -65,7 +65,7 @@ gatewayServer csopts appopts = do
             queuePopGW fromradio_input' >>=
               tosock s pktslicer1 commsecCtx
     a2 <- asyncRunGW console "socket to radio" $ forever $
-            lift (N.recv s 64) >>~
+            lift (N.recv s 2048) >>~
               fromsock toradio_output pktslicer2 commsecCtx
 
     mapM_ A.wait [a1, a2]

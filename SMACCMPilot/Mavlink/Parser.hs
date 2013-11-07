@@ -5,7 +5,6 @@ module SMACCMPilot.Mavlink.Parser
   , emptyParseSt
   , parseStream
   , ProcessSt
-  , magicNum
   ) where
 
 import qualified Data.ByteString as B
@@ -117,14 +116,11 @@ parseByte s b
                  crc_hi ss    = snd (crc_lo_hi (crc ss))
   | otherwise =
       case b of
-        magicNum -> ok $ addByte b $ s { gotMagic = True
-                                       , crc = 0xFFFF
-                                       , packetOffs = 1
-                                       }
-        _        -> ok s -- Don't add byte here---not parsing a packet.
-
-magicNum :: Word8
-magicNum = 254
+        254 -> ok $ addByte b $ s { gotMagic = True
+                                  , crc = 0xFFFF
+                                  , packetOffs = 1
+                                  }
+        _  -> ok s -- Don't add byte here---not parsing a packet.
 
 ok :: ParseSt -> Result
 ok = Right
@@ -144,13 +140,17 @@ nextNoCRC b s = addByte b
 validatePacketLen :: ParseSt -> Result
 validatePacketLen s =
   case lookup (packetType s) messageLensCRCs of
-    Just (len, _) | len == decLen -> Right s
-                  | otherwise     -> Left (ErrSt errmsg $ plustwo len)
-    _                             -> Left (ErrSt errmsg $ plustwo decLen)
+    Just (len, _) | len == decLen
+                 -> Right s
+                  | otherwise
+                 -> Left (ErrSt (errmsgLen len) $ plustwo len)
+    _            -> Left (ErrSt errmsg          $ plustwo decLen)
   where
-  errmsg    = "invalid packet len: expected " ++ show decLen
-  decLen    = decodedLen s
-  plustwo l = fromIntegral l + 2
+  errmsg        = "Invalid packet length. Couldn't decode packet."
+  errmsgLen len = "Invalid packet length. Expected " ++ show decLen
+               ++ " and received " ++ show len
+  decLen        = decodedLen s
+  plustwo l     = fromIntegral l + 2
 
 withCRCExtra :: ParseSt -> Result
 withCRCExtra s =
