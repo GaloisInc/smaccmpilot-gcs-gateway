@@ -20,6 +20,8 @@ library
                        SMACCMPilot.GCS.Gateway.HXFraming,
                        SMACCMPilot.GCS.Gateway.Mavlink,
                        SMACCMPilot.GCS.Gateway.ByteString,
+                       SMACCMPilot.GCS.Gateway.RadioStatus,
+                       SMACCMPilot.GCS.Gateway.RadioDebug,
                        SMACCMPilot.GCS.Gateway.Link,
                        SMACCMPilot.Mavlink.Parser,
                        SMACCMPilot.Mavlink.MessageName
