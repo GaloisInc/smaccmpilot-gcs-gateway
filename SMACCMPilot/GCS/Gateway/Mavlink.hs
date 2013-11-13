@@ -20,13 +20,13 @@ import           SMACCMPilot.GCS.Gateway.Monad
 
 -- | Take a list of MAVLink packets and pack them until we might exceed the
 -- commsec buffer length (mavlinkSize).  Return the packed packets and the rest.
--- Don't try to pack if we don't have at lease enough packets to fill pu the
+-- Don't try to pack if we don't have at least enough packets to fill up the
 -- buffer.
 takeWhileLen :: [ByteString] -> (ByteString,[ByteString])
 takeWhileLen bss
-  | B.length (B.concat bss) >= fromIntegral mavlinkSize
+  | B.length (B.concat bss) > fromIntegral mavlinkSize
   = go B.empty bss 0
-  | otherwise
+  | otherwise -- Just pack them all in.
   = (B.empty, bss)
   where
   go snd []     _ = (snd, [])
@@ -54,7 +54,9 @@ mkMavlinkPacketSlice = do
     let (errs, packets, state') = parseStream maxsize state bs
     mapM_ writeErr errs
     return (packets, state')
+
   maxsize = fromIntegral mavlinkSize
+
   returnNext tag pref newpkts = do
     pending <- lift $ readIORef pref
     case pending ++ newpkts of
@@ -71,6 +73,7 @@ mkMavlinkPacketSlice = do
 
   warnQueue len = writeLog ("warning: mavlink packet slicer backlog is "
                            ++ (show len) ++ " long")
+
 
 mavlinkDebugger :: String -> ByteString -> GW ()
 mavlinkDebugger tag bs = writeDbg msg
