@@ -22,35 +22,20 @@ import qualified SMACCMPilot.Communications as Comm
 --------------------------------------------------------------------------------
 -- This is one of the functions that really benefits from pipes/iteratees
 -- Instead I'll just mutate some state in the IO monad
-mkMavlinkPacketSlice :: IO (ByteString -> GW (Maybe ByteString))
+mkMavlinkPacketSlice :: IO (ByteString -> GW [ByteString])
 mkMavlinkPacketSlice = do
   stateRef <- newIORef emptyParseSt
-  pendingRef <- newIORef []
   return $ \bs -> do
     state <- lift $ readIORef stateRef
     (packets, state') <- run state bs
     lift $ writeIORef stateRef state'
-    returnNext pendingRef packets
+    return packets
   where
   run state bs = do
     let (errs, packets, state') = parseStream maxsize state bs
     mapM_ writeErr errs
     return (packets, state')
   maxsize = fromIntegral Comm.mavlinkSize
-  returnNext pref newpkts = do
-    pending <- lift $ readIORef pref
-    case pending ++ newpkts of
-      [] -> lift (writeIORef pref [])
-          >> return Nothing
-      a:as -> do
-        lift (writeIORef pref as)
-        -- I don't think we'll ever get a bunch of packets backed up in here
-        -- but we're better off finding out the easy way
-        when (length as > 10) $ warnQueue (length as)
-        return (Just a)
-
-  warnQueue len = writeLog ("warning: mavlink packet slicer backlog is "
-                           ++ (show len) ++ " long")
 
 mavlinkDebugger :: String -> ByteString -> GW ByteString
 mavlinkDebugger tag bs = writeDbg msg >> return bs

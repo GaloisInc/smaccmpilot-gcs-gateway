@@ -10,6 +10,7 @@ module SMACCMPilot.GCS.Gateway.Monad
   , queuePushGW
   , queuePopGW
   , (>~>)
+  , (>*>)
   , (>>~)
   ) where
 
@@ -55,6 +56,10 @@ queuePushGW q v = lift (queuePush q v)
 infixr 0 >~>
 (>~>) :: Monad m => (a -> m (Maybe b)) -> (b -> m ()) -> a -> m ()
 (>~>) a b a1 = a a1 >>= maybe (return ()) b
+
+infixr 0 >*>
+(>*>) :: Monad m => (a -> m [b]) -> (b -> m ()) -> a -> m ()
+(>*>) a b a1 = a a1 >>= mapM_ b
 
 infixr 0 >>~
 (>>~) :: Monad m => (m (Maybe b)) -> (b -> m ()) -> m ()

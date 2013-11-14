@@ -85,13 +85,13 @@ gatewayServer csopts appopts = do
 --      bytestringDebugger "fromveh tagged"     >=>
       decrypt commsecCtx                      >~>
 --      bytestringDebugger "fromveh decrypted"  >=>
-      mavlinkPacketSlice                      >~>
+      mavlinkPacketSlice                      >*>
       mavlinkDebugger "fromveh"               >=>
       queuePushGW q
 
     fromsock q mavlinkPacketSlice packer commsecCtx =
---      bytestringDebugger "toveh raw"       >=>
-      mavlinkPacketSlice                   >~>
+      bytestringDebugger "toveh raw"       >=>
+      mavlinkPacketSlice                   >*>
       mavlinkDebugger "toveh"              >=>
       packer                               >~>
       bytestringPad Comm.mavlinkSize       >=>
