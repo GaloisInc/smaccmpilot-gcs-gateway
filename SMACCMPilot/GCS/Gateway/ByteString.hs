@@ -7,13 +7,13 @@ import           Text.Printf
 import qualified SMACCMPilot.Communications as Comm
 import           SMACCMPilot.GCS.Gateway.Monad
 
-bytestringPad :: ByteString -> GW ByteString
-bytestringPad bs =
+bytestringPad :: Integer -> ByteString -> GW ByteString
+bytestringPad l bs =
   if B.length bs <= len
     then return $ bs `B.append` (B.pack $ replicate (len - B.length bs) 0)
     else writeErr "bytestringPad got oversized bytestring" >> return bs
   where
-  len = fromInteger Comm.mavlinkSize
+  len = fromInteger l
 
 bytestringDebugger :: String -> ByteString -> GW ByteString
 bytestringDebugger tag bs = writeDbg msg >> return bs

@@ -11,6 +11,7 @@ import           Control.Monad
 import           System.IO
 
 import qualified Network.Simple.TCP              as N
+import qualified SMACCMPilot.Communications as Comm
 
 import qualified SMACCMPilot.GCS.Commsec.Opts    as CS
 import qualified SMACCMPilot.GCS.Gateway.Opts    as App
@@ -24,6 +25,7 @@ import           SMACCMPilot.GCS.Gateway.Link
 import           SMACCMPilot.GCS.Gateway.Async
 import           SMACCMPilot.GCS.Gateway.Queue
 import           SMACCMPilot.GCS.Gateway.Monad
+import           SMACCMPilot.GCS.Gateway.Packing
 
 gatewayServer :: CS.Options -> App.Options -> IO ()
 gatewayServer csopts appopts = do
@@ -38,6 +40,10 @@ gatewayServer csopts appopts = do
   -- Both the link managment and commsec server will write to
   -- this channel:
   (toradio_output,    toradio_input)    <- newQueue
+
+  -- Both the link managment and radio-to-socket pipeline
+  -- the output of this channel:
+  (tosocket_output,    tosocket_input)    <- newQueue
 
   hxframedSerial appopts (annotate console "hxserial")
                 [fromradio_output, fromradio_output']
@@ -54,36 +60,42 @@ gatewayServer csopts appopts = do
         putStrLn ("Test mode running at " ++ show rate ++ "hz")
         runGW console $ forever $
           lift (C.threadDelay (1000000 `div` rate)) >>
-          bytestringPad (B.pack [2,3,4,5])          >>=
+          bytestringPad Comm.mavlinkSize (B.pack [2,3,4,5]) >>=
             (createHXFrameWithTag 0 >=> queuePushGW toradio_output)
 
   N.serve (N.Host "127.0.0.1") (show (App.srvPort appopts)) $ \(s,_) -> do
     consoleLog console "Connected to TCP client"
     pktslicer1 <- mkMavlinkPacketSlice
     pktslicer2 <- mkMavlinkPacketSlice
-    a1 <- asyncRunGW console "radio to socket" $ forever $
+    packer <- mkPacker Comm.mavlinkSize
+    a1 <- asyncRunGW console "radio to socket queue" $ forever $
             queuePopGW fromradio_input' >>=
-              tosock s pktslicer1 commsecCtx
-    a2 <- asyncRunGW console "socket to radio" $ forever $
+              fromradio tosocket_output pktslicer1 commsecCtx
+    a2 <- asyncRunGW console "socket queue to socket" $ forever $
+            queuePopGW tosocket_input >>= lift . (N.send s)
+    a3 <- asyncRunGW console "socket to radio" $ forever $
             lift (N.recv s 2048) >>~
-              fromsock toradio_output pktslicer2 commsecCtx
+              fromsock toradio_output pktslicer2 packer commsecCtx
 
-    mapM_ A.wait [a1, a2]
+    mapM_ A.wait [a1, a2, a3]
     where
-    tosock s mavlinkPacketSlice commsecCtx =
+    fromradio q mavlinkPacketSlice commsecCtx =
       hxframeDebugger "fromveh raw"           >=>
       hxframePayloadFromTag 0                 >~>
 --      bytestringDebugger "fromveh tagged"     >=>
       decrypt commsecCtx                      >~>
 --      bytestringDebugger "fromveh decrypted"  >=>
-      mavlinkPacketSlice "fromveh"            >~>
-      lift . (N.send s)
+      mavlinkPacketSlice                      >~>
+      mavlinkDebugger "fromveh"               >=>
+      queuePushGW q
 
-    fromsock q mavlinkPacketSlice commsecCtx =
+    fromsock q mavlinkPacketSlice packer commsecCtx =
 --      bytestringDebugger "toveh raw"       >=>
-      mavlinkPacketSlice "toveh"           >~>
-      bytestringPad                        >=>
---      bytestringDebugger "toveh plaintext" >=>
+      mavlinkPacketSlice                   >~>
+      mavlinkDebugger "toveh"              >=>
+      packer                               >~>
+      bytestringPad Comm.mavlinkSize       >=>
+      bytestringDebugger "toveh plaintext" >=>
       encrypt commsecCtx                   >~>
 --      bytestringDebugger "toveh ct"        >=>
       createHXFrameWithTag 0               >=>

@@ -23,6 +23,7 @@ library
                        SMACCMPilot.GCS.Gateway.RadioStatus,
                        SMACCMPilot.GCS.Gateway.RadioDebug,
                        SMACCMPilot.GCS.Gateway.Link,
+                       SMACCMPilot.GCS.Gateway.Packing,
                        SMACCMPilot.Mavlink.Parser,
                        SMACCMPilot.Mavlink.MessageName
   build-depends:       base,
