@@ -82,9 +82,9 @@ gatewayServer csopts appopts = do
     fromradio q mavlinkPacketSlice commsecCtx =
       hxframeDebugger "fromveh raw"           >=>
       hxframePayloadFromTag 0                 >~>
---      bytestringDebugger "fromveh tagged"     >=>
+      bytestringDebugger "fromveh tagged"     >=>
       decrypt commsecCtx                      >~>
---      bytestringDebugger "fromveh decrypted"  >=>
+      bytestringDebugger "fromveh decrypted"  >=>
       mavlinkPacketSlice                      >*>
       mavlinkDebugger "fromveh"               >=>
       queuePushGW q
