@@ -1,12 +1,15 @@
 -- Mavlink message names: common.xml plus smaccmpilot extensions, more or less.
 -- Maintained by hand (todo, generate automatically in smaccm-mavlink)
 
-module SMACCMPilot.Mavlink.MessageName where
+module SMACCMPilot.GCS.Mavlink.MessageName where
 
 messagename :: Int -> Maybe String
 messagename 0xA9 = Just "DATA16"
 messagename 0xAA = Just "DATA32"
 messagename 0xAB = Just "DATA64"
+messagename 0xAD = Just "ALT_HOLD_DEBUG"
+messagename 0xAE = Just "VEHICLE_RADIO"
+messagename 0xAF = Just "GCS_RADIO"
 messagename 0x00 = Just "HEARTBEAT"
 messagename 0x01 = Just "SYS_STATUS"
 messagename 0x02 = Just "SYSTEM_TIME"

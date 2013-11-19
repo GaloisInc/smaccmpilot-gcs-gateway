@@ -1,6 +1,6 @@
 
 -- Mavlink (1.0) parser.
-module SMACCMPilot.Mavlink.Parser
+module SMACCMPilot.GCS.Mavlink.Parser
   ( ParseSt(..)
   , emptyParseSt
   , parseStream

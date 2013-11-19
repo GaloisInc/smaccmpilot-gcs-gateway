@@ -14,6 +14,7 @@ library
   exposed-modules:     SMACCMPilot.GCS.Commsec,
                        SMACCMPilot.GCS.Commsec.Test,
                        SMACCMPilot.GCS.Commsec.Opts,
+
                        SMACCMPilot.GCS.Gateway.Server,
                        SMACCMPilot.GCS.Gateway.Opts,
                        SMACCMPilot.GCS.Gateway.Commsec,
@@ -24,8 +25,13 @@ library
                        SMACCMPilot.GCS.Gateway.RadioDebug,
                        SMACCMPilot.GCS.Gateway.Link,
                        SMACCMPilot.GCS.Gateway.Packing,
-                       SMACCMPilot.Mavlink.Parser,
-                       SMACCMPilot.Mavlink.MessageName
+
+                       SMACCMPilot.GCS.Mavlink.CRC,
+                       SMACCMPilot.GCS.Mavlink.Parser,
+                       SMACCMPilot.GCS.Mavlink.MessageName,
+                       SMACCMPilot.GCS.Mavlink.Messages.GcsRadio,
+                       SMACCMPilot.GCS.Mavlink.Send
+
   build-depends:       base,
                        serialport,
                        network,

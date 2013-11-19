@@ -13,8 +13,8 @@ import           Data.ByteString               (ByteString)
 import           Data.Word
 import           Text.Printf
 
-import           SMACCMPilot.Mavlink.Parser
-import           SMACCMPilot.Mavlink.MessageName
+import           SMACCMPilot.GCS.Mavlink.Parser
+import           SMACCMPilot.GCS.Mavlink.MessageName
 import           SMACCMPilot.GCS.Gateway.Monad
 
 import qualified SMACCMPilot.Communications as Comm
