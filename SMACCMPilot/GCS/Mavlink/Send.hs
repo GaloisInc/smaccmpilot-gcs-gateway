@@ -21,7 +21,7 @@ data MavlinkState =
 
 mavlinkSend :: MavlinkState -> Word8 -> ByteString -> Maybe (ByteString, MavlinkState)
 mavlinkSend state msgid packedpayload = case lookup msgid messageLensCRCs of
-  Just (len, crcextra) -> case B.length packedpayload + 6 == fromIntegral len of
+  Just (len, crcextra) -> case B.length packedpayload == fromIntegral len of
     True -> Just (B.toLazyByteString (packet len crcextra), state')
     False -> Nothing
   Nothing -> Nothing
@@ -37,5 +37,5 @@ mavlinkSend state msgid packedpayload = case lookup msgid messageLensCRCs of
              <> B.word8 (sysid  state)
              <> B.word8 (compid state)
              <> B.word8 msgid
-             <> B.lazyByteString packedpayload -- XXX ADD HEADER STUFF HERE
+             <> B.lazyByteString packedpayload
 

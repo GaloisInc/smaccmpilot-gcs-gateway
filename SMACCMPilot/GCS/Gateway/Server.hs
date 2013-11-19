@@ -49,7 +49,7 @@ gatewayServer csopts appopts = do
                 [fromradio_output, fromradio_output']
                 toradio_input
 
-  linkManagment console toradio_output fromradio_input
+  linkManagment console toradio_output fromradio_input tosocket_output
 
   commsecCtx <- mkCommsec csopts
 

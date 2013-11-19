@@ -7,6 +7,9 @@ import qualified Data.ByteString.Lazy.Builder as B
 import           Data.Monoid
 import           Data.Word
 
+gcsRadioMsgId :: Word8
+gcsRadioMsgId = 175
+
 data GcsRadioMessage =
   GcsRadioMessage
     { rxerrors :: Word16
@@ -21,8 +24,8 @@ data GcsRadioMessage =
 packPayloadGcsRadioMessage :: GcsRadioMessage -> ByteString
 packPayloadGcsRadioMessage m = B.toLazyByteString builder
   where
-  builder = B.word16BE (rxerrors m)
-         <> B.word16BE (fixed    m)
+  builder = B.word16LE (rxerrors m)
+         <> B.word16LE (fixed    m)
          <> B.word8    (rssi     m)
          <> B.word8    (remrssi  m)
          <> B.word8    (txbuf    m)
