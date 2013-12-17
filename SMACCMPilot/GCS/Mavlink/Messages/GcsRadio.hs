@@ -2,7 +2,6 @@
 module SMACCMPilot.GCS.Mavlink.Messages.GcsRadio where
 
 import           Data.ByteString.Lazy         (ByteString)
-import qualified Data.ByteString.Lazy         as B
 import qualified Data.ByteString.Lazy.Builder as B
 import           Data.Monoid
 import           Data.Word
