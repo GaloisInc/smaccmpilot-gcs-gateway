@@ -35,18 +35,18 @@ mkCommsec opts = do
             case mct of
               Nothing -> err "encryption failure"
               Just ct -> case (B.length ct) == ctlen of
-                False -> invalid "encrypt ct length" (B.length ct) ctlen
+                False -> invalid "encrypt ct length" ctlen (B.length ct)
                 True -> return (Just ct)
 
     , decrypt = \ct ->
         case (B.length ct) == ctlen of
-          False -> invalid "decrypt ct length" (B.length ct) ctlen
+          False -> invalid "decrypt ct length" ctlen (B.length ct)
           True -> do
             decrypted <- lift $ CS.secPkgDec_HS cryptoCtx ct
             case decrypted of
               Left e -> err ("decryption error: " ++ (show e))
               Right pt -> case (B.length pt) == ptlen of
-                False -> invalid "decrypt pt length" (B.length pt) ptlen
+                False -> invalid "decrypt pt length" ptlen (B.length pt)
                 True -> return (Just pt)
     }
   where
@@ -58,7 +58,7 @@ mkCommsec opts = do
   ssalt   = CS.sendSalt opts
   skey    = B.pack (CS.sendKey opts)
 
-  invalid name a b = err $ printf "Invalid %s: expected %s got %s"
-                                        name (show a) (show b)
+  invalid name expected got = err $ printf "Invalid %s: expected %s got %s"
+                                  name (show expected) (show got)
   err msg = writeErr msg >> return Nothing
 
