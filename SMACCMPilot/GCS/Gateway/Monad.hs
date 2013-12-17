@@ -63,4 +63,4 @@ infixr 0 >*>
 
 infixr 0 >>~
 (>>~) :: Monad m => (m (Maybe b)) -> (b -> m ()) -> m ()
-(>>~) a b = ((\_ -> a) >~> b) ()
+(>>~) a b = (const a >~> b) ()

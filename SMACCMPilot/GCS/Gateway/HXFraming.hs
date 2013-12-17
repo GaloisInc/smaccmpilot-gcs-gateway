@@ -36,13 +36,15 @@ createHXFrameWithTag :: Word8 -> ByteString -> GW HXFrame
 createHXFrameWithTag tag msg =
   return $ HXFrame { hxframe_tag = tag, hxframe_msg = msg }
 
-hxframedSerial :: Options -> Console -> [QueueOutput HXFrame] -> QueueInput HXFrame -> IO ()
+hxframedSerial :: Options -> Console -> [QueueOutput HXFrame]
+               -> QueueInput HXFrame -> IO ()
 hxframedSerial opts console hxoutputs hxinput = do
   (fromveh_output, fromveh_input) <- newQueue
   (toveh_output,   toveh_input)   <- newQueue
   serialServer opts console fromveh_output toveh_input
-  void $ asyncRunGW console "hxstream encode" $ forever
-      $ queuePopGW hxinput >>= (hxencode >=> queuePushGW toveh_output)
+  void $ asyncRunGW console "hxstream encode"
+       $ forever
+       $ queuePopGW hxinput >>= (hxencode >=> queuePushGW toveh_output)
   void $ asyncRunGW console "hxstream decode" $
     decoder HX.emptyStreamState fromveh_input
   where
