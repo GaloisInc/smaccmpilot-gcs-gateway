@@ -8,9 +8,7 @@ import qualified Control.Concurrent              as C
 import qualified Data.ByteString                 as B
 import qualified Data.ByteString.Lazy            as L
 import           Data.ByteString (ByteString)
-import           Data.Char (ord)
 import           Data.IORef
-import           Data.Word
 
 import           SMACCMPilot.GCS.Gateway.Monad
 import           SMACCMPilot.GCS.Gateway.Async
@@ -45,7 +43,7 @@ linkManagment console link_output link_input mavlink_output = do
   where
   defaultMavlinkState = MavlinkState { sysid = 77, compid = 0, seqnum = 0 }
   statReqFrame = B.pack [0x42, 0x0d] -- "B\r"
-  dbgReqFrame  = B.pack [0x44, 0x0d] -- "D\r"
+  -- dbgReqFrame  = B.pack [0x44, 0x0d] -- "D\r"
 
   process :: IORef MavlinkState -> ByteString -> GW ()
   process mavlinkstate frame =

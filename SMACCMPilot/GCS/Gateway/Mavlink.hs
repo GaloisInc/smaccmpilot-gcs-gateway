@@ -7,7 +7,6 @@ module SMACCMPilot.GCS.Gateway.Mavlink
 import Data.IORef
 
 import           Prelude hiding (snd)
-import           Control.Monad
 import qualified Data.ByteString               as B
 import           Data.ByteString               (ByteString)
 import           Data.Word

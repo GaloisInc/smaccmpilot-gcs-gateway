@@ -10,6 +10,10 @@ copyright:           Galois, Inc.
 build-type:          Simple
 cabal-version:       >=1.10
 
+flag werror
+  default:              False
+  description:          Pass -Werror to GHC.
+
 library
   exposed-modules:     SMACCMPilot.GCS.Commsec,
                        SMACCMPilot.GCS.Commsec.Test,
@@ -48,7 +52,10 @@ library
                        async >= 2.0.1,
                        smaccm-shared-comm
   default-language:    Haskell2010
-  ghc-options:         -Wall
+  if flag(werror)
+    ghc-options:        -Wall -Werror
+  else
+    ghc-options:        -Wall
 
 executable smaccm-gcs-gateway
   main-is:             Main.hs
@@ -69,4 +76,7 @@ executable smaccm-gcs-gateway
                        smaccm-shared-comm,
                        smaccm-gcs-gateway
   default-language:    Haskell2010
-  ghc-options:         -Wall -O2 -threaded -rtsopts -with-rtsopts=-N3
+  if flag(werror)
+    ghc-options:        -Wall -O2 -threaded -rtsopts -with-rtsopts=-N3
+  else
+    ghc-options:        -Wall -Werror -O2 -threaded -rtsopts -with-rtsopts=-N3

@@ -4,7 +4,6 @@ import           Data.ByteString               (ByteString)
 import qualified Data.ByteString            as B
 import           Text.Printf
 
-import qualified SMACCMPilot.Communications as Comm
 import           SMACCMPilot.GCS.Gateway.Monad
 
 bytestringPad :: Integer -> ByteString -> GW ByteString

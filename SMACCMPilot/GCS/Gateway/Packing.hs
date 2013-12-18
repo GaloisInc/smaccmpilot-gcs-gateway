@@ -6,11 +6,8 @@ module SMACCMPilot.GCS.Gateway.Packing
 import Data.IORef
 
 import           Prelude hiding (snd)
-import           Control.Monad
 import qualified Data.ByteString               as B
 import           Data.ByteString               (ByteString)
-import           Data.Word
-import           Text.Printf
 
 import           SMACCMPilot.GCS.Gateway.Monad
 import           SMACCMPilot.GCS.Gateway.Mavlink
@@ -26,12 +23,12 @@ mkPacker packsize = do
   where
   run :: [ByteString] -> ByteString -> (Maybe ByteString, [ByteString])
   run pending latest = if mavlinkPacketName (B.unpack latest) == "HEARTBEAT"
-                       || sum (map B.length all) > fromIntegral packsize
+                       || sum (map B.length all') > fromIntegral packsize
      then (Just packed, rest)
-     else (Nothing, all)
+     else (Nothing, all')
     where
-    (packed, rest) = takeWhileLen packsize all
-    all = pending ++ [latest]
+    (packed, rest) = takeWhileLen packsize all'
+    all' = pending ++ [latest]
 
 -- | Take a list of sub-frames and pack them until we might exceed the frame
 -- length.  Return the concatenated sub-frames, which will have length less than
