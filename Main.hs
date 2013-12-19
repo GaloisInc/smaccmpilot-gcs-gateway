@@ -27,7 +27,7 @@ getOpts argv = do
                                   ++ (unwords nonOpts))
       | otherwise ->
           case getOpt' Permute App.options unrecOpts of
-            (appopts, nonOpts', unrecOpts', errs')
+            (appopts, _nonOpts', unrecOpts', errs')
               | not (null errs) -> usage ("Invalid options: "
                                           ++ (unwords errs'))
               | not (null unrecOpts') -> usage ("Unknown options: "
