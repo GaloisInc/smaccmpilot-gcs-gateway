@@ -7,8 +7,9 @@ module SMACCMPilot.GCS.Gateway.Mavlink
 import Data.IORef
 
 import           Prelude hiding (snd)
-import qualified Data.ByteString               as B
+import qualified Data.ByteString                             as B
 import           Data.ByteString               (ByteString)
+import qualified Data.ByteString.Char8                       as BS
 import           Data.Word
 import           Text.Printf
 
@@ -16,7 +17,9 @@ import           SMACCMPilot.GCS.Mavlink.Parser
 import           SMACCMPilot.GCS.Mavlink.MessageName
 import           SMACCMPilot.GCS.Gateway.Monad
 
-import qualified SMACCMPilot.Communications as Comm
+import qualified SMACCMPilot.GCS.Mavlink.Messages.VehCommsec as V
+
+import qualified SMACCMPilot.Communications                  as Comm
 
 --------------------------------------------------------------------------------
 -- This is one of the functions that really benefits from pipes/iteratees
@@ -37,14 +40,17 @@ mkMavlinkPacketSlice = do
   maxsize = fromIntegral Comm.mavlinkSize
 
 mavlinkDebugger :: String -> ByteString -> GW ByteString
-mavlinkDebugger tag bs = writeDbg msg >> return bs
+mavlinkDebugger tag bs = do
+  writeDbg msg
+  runMsgParsers p
+  return bs
   where
-  p       = B.unpack bs
-  msg     = printf "%s MAVLink %s [%s]" tag (mavlinkPacketName p) (display p)
-  display = fixup . unwords . map (printf "0x%0.2x,")
-  fixup   = reverse . drop 1 . reverse
+  msg      = printf "%s MAVLink %s [%s]" tag (mavlinkPacketName p) (display p)
+  p        = B.unpack bs
+  display  = fixup . unwords . map (printf "0x%0.2x,")
+  fixup [] = []
+  fixup ls = tail ls
 
--- God help us.
 mavlinkPacketName :: [Word8] -> String
 mavlinkPacketName (_:_:_:_:_:pid:_) =
   case messagename (fromIntegral pid) of
@@ -52,4 +58,9 @@ mavlinkPacketName (_:_:_:_:_:pid:_) =
     Nothing -> "??msgid??"
 mavlinkPacketName _ = "(incomplete)"
 
-
+-- Run specific parsers for specific messages.
+runMsgParsers :: [Word8] -> GW ()
+runMsgParsers ml =
+  case V.vehCommsecInfo ml of
+    []   -> return ()
+    msg  -> mapM_ (writeDbg . printf "veh_commsec: %s" . BS.unpack) msg

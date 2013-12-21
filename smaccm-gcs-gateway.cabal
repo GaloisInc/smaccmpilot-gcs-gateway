@@ -34,6 +34,7 @@ library
                        SMACCMPilot.GCS.Mavlink.Parser,
                        SMACCMPilot.GCS.Mavlink.MessageName,
                        SMACCMPilot.GCS.Mavlink.Messages.GcsRadio,
+                       SMACCMPilot.GCS.Mavlink.Messages.VehCommsec,
                        SMACCMPilot.GCS.Mavlink.Send
 
   build-depends:       base,
