@@ -1,15 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 
--- Written by-hand for now...
+-- Written by-hand for now... XXX Doesn't perform CRC checks.
 -- Pleasantly show statistics from SMACCMPilot decrypting GCS data.
 
 module SMACCMPilot.GCS.Mavlink.Messages.VehCommsec
-  ( vehCommsecInfo ) where
+  ( vehCommsecInfo
+  ) where
 
 import qualified Data.ByteString.Char8        as B
 import qualified SMACCMPilot.Communications   as C
 import           Data.Monoid
 import           Data.Word
+import           Data.Bits
 
 -- Must match message smaccm-mavlink message payload VEH_COMMSEC.
 data VehCommsecMessage =
@@ -69,11 +71,11 @@ extract :: (Int, Int) -> [Word8] -> [Word8]
 extract (start, end) bs = drop start (take end bs)
 
 -- Parse little Endian, one byte at time.
-parseLE :: Num a => [Word8] -> a
+parseLE :: (Num a, Bits a) => [Word8] -> a
 parseLE = fst . foldl go (0, 0)
   where
-  go :: Num a => (a, Integer) -> Word8 -> (a, Integer)
-  go (acc, i) b = (acc + fromIntegral b * 16^i, i+1)
+  go :: (Num a, Bits a) => (a, Int) -> Word8 -> (a, Int)
+  go (acc, i) b = (shiftL (fromIntegral b) (i * 8) + acc, i+1)
 
 vehCommsecInfo :: [Word8] -> [B.ByteString]
 vehCommsecInfo bs = case mavlinkMsgToData bs of
