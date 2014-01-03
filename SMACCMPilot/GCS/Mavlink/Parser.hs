@@ -143,12 +143,13 @@ validatePacketLen s =
     Just (len, _) | len == decLen
                  -> Right s
                   | otherwise
-                 -> Left (ErrSt (errmsgLen len) $ plustwo len)
-    _            -> Left (ErrSt errmsg          $ plustwo decLen)
+                 -> Left (ErrSt (badlen len) (plustwo len))
+    _ -> Left (ErrSt notfound (plustwo decLen))
   where
-  errmsg        = "Invalid packet length. Couldn't decode packet."
-  errmsgLen len = "Invalid packet length. Expected " ++ show decLen
-               ++ " and received " ++ show len
+  prefix   = "Got packet type " ++ show (packetType s) ++ ", "
+  notfound = prefix ++ "not found in packet schema table."
+  badlen len = prefix ++ "expected length " ++ show len
+                      ++ ", received " ++ show decLen
   decLen        = decodedLen s
   plustwo l     = fromIntegral l + 2
 
