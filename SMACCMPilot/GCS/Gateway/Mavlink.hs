@@ -49,13 +49,15 @@ mavlinkDebugger tag bs = do
   p        = B.unpack bs
   display  = fixup . unwords . map (printf "0x%0.2x,")
   fixup [] = []
-  fixup ls = tail ls
+  fixup ls = (reverse . drop 1 . reverse) ls
 
 mavlinkPacketName :: [Word8] -> String
 mavlinkPacketName (_:_:_:_:_:pid:_) =
-  case messagename (fromIntegral pid) of
+  case messagename mid of
     Just m -> m
-    Nothing -> "??msgid??"
+    Nothing -> "??msgid "++ (show mid) ++ "??"
+  where
+  mid = fromIntegral pid
 mavlinkPacketName _ = "(incomplete)"
 
 -- Run specific parsers for specific messages.
