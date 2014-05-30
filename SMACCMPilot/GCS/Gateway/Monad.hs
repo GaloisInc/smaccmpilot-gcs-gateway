@@ -16,12 +16,16 @@ module SMACCMPilot.GCS.Gateway.Monad
 
 import qualified MonadLib as M
 
+import Control.Applicative
+
 import SMACCMPilot.GCS.Gateway.Console
 import SMACCMPilot.GCS.Gateway.Queue
 
+--------------------------------------------------------------------------------
+
 newtype GW a =
   GW { unGW :: M.ReaderT Console IO a }
-  deriving (Functor, Monad)
+  deriving (Functor, Monad, Applicative)
 
 runGW :: Console ->  GW a -> IO a
 runGW console gw = M.runReaderT console (unGW gw)
